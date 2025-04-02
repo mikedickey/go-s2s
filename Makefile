@@ -5,6 +5,9 @@ all: s2s
 s2s:
 	@go build -o s2s ./cmd
 
+test:
+	@go test ./pkg/s2s -v
+
 fmt:
 	@gofmt -l -w `find ./ -name "*.go"`
 

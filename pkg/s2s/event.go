@@ -1,5 +1,5 @@
 // ------------------------------------------------------------------
-// Golang Splunk-to-Splunk Protocol Library
+// Splunk-to-Splunk Protocol Library
 // ------------------------------------------------------------------
 // Copyright (c) 2025 Mike Dickey
 //
@@ -17,28 +17,81 @@
 
 package s2s
 
-import "fmt"
+import (
+	"io"
+	"strings"
+)
 
+// Event represents an event in the Splunk-to-Splunk protocol.
 type Event struct {
-	Host   string
-	Source string
-	Index  string
-	Time   string
-	Event  string
-	Fields map[string]interface{}
+	Index      string
+	Host       string
+	Source     string
+	SourceType string
+	Raw        string
+	Fields     map[string]string
 }
 
-func NewEvent(host, source, index, time, event string, fields map[string]interface{}) *Event {
-	return &Event{
-		Host:   host,
-		Source: source,
-		Index:  index,
-		Time:   time,
-		Event:  event,
-		Fields: fields,
+// Clear clears the event.
+func (e *Event) Clear() {
+	e.Index = ""
+	e.Host = ""
+	e.Source = ""
+	e.SourceType = ""
+	e.Raw = ""
+	e.Fields = make(map[string]string)
+}
+
+// Read reads the event from a reader.
+func (e *Event) Read(r io.Reader) error {
+	if e == nil {
+		return ErrNilEvent
 	}
+	e.Clear()
+	return DecodeEvent(r, e)
 }
 
+// Write writes the event to a writer.
+func (e *Event) Write(w io.Writer) error {
+	if e == nil {
+		return ErrNilEvent
+	}
+	return EncodeEvent(w, e)
+}
+
+// String returns a string representation of the event.
 func (e *Event) String() string {
-	return fmt.Sprintf("%s %s %s %s %s %v", e.Host, e.Source, e.Index, e.Time, e.Event, e.Fields)
+	var sb strings.Builder
+	if e.Index != "" {
+		sb.WriteString("index=")
+		sb.WriteString(e.Index)
+		sb.WriteString(" ")
+	}
+	if e.Host != "" {
+		sb.WriteString("host=")
+		sb.WriteString(e.Host)
+		sb.WriteString(" ")
+	}
+	if e.Source != "" {
+		sb.WriteString("source=")
+		sb.WriteString(e.Source)
+		sb.WriteString(" ")
+	}
+	if e.SourceType != "" {
+		sb.WriteString("sourcetype=")
+		sb.WriteString(e.SourceType)
+		sb.WriteString(" ")
+	}
+	for k, v := range e.Fields {
+		if k != "" {
+			sb.WriteString(k)
+			sb.WriteString("=")
+			sb.WriteString(v)
+			sb.WriteString(" ")
+		}
+	}
+	sb.WriteString("_raw=")
+	sb.WriteString(e.Raw)
+	sb.WriteString(" ")
+	return strings.TrimSpace(sb.String())
 }

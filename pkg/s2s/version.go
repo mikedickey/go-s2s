@@ -1,5 +1,5 @@
 // ------------------------------------------------------------------
-// Golang Splunk-to-Splunk Protocol Library
+// Splunk-to-Splunk Protocol Library
 // ------------------------------------------------------------------
 // Copyright (c) 2025 Mike Dickey
 //
