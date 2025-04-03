@@ -92,6 +92,11 @@ func main() {
 		return
 	}
 
+	if !strings.Contains(flagEndpoint, ":") {
+		// default to port 9997
+		flagEndpoint = flagEndpoint + ":9997"
+	}
+
 	if flagServerMode {
 		if flagTLS && (flagCert == "" || flagKeyFile == "") {
 			log.Fatal("Both -cert and -key must be specified when using TLS in server mode")
@@ -126,6 +131,11 @@ func main() {
 
 	if flagFile == "" {
 		log.Fatal("Please specify a log file using -file")
+	}
+
+	if flagSource == "" {
+		// default to log file name
+		flagSource = flagFile
 	}
 
 	// Open the log file

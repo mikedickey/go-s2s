@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"strings"
 )
 
 var ErrInvalidData = errors.New("invalid data format")
@@ -30,7 +31,7 @@ var ErrNilEvent = errors.New("event is nil")
 // The format is: 4-byte length (big-endian uint32) + string contents + null terminator
 func EncodeString(w io.Writer, s string) error {
 	// Write length
-	if err := binary.Write(w, binary.BigEndian, uint32(len(s))); err != nil {
+	if err := binary.Write(w, binary.BigEndian, uint32(len(s)+1)); err != nil {
 		return err
 	}
 
@@ -57,7 +58,7 @@ func DecodeString(r io.Reader) (string, error) {
 	}
 
 	// Read string contents
-	buf := make([]byte, length)
+	buf := make([]byte, length-1)
 	if _, err := io.ReadFull(r, buf); err != nil {
 		return "", err
 	}
@@ -118,21 +119,21 @@ func EncodeEvent(w io.Writer, e *Event) error {
 
 	// write host if present
 	if e.Host != "" {
-		if err := EncodeKeyValue(w, "MetaData:Host", e.Host); err != nil {
+		if err := EncodeKeyValue(w, "MetaData:Host", "host::"+e.Host); err != nil {
 			return err
 		}
 	}
 
 	// write source if present
 	if e.Source != "" {
-		if err := EncodeKeyValue(w, "MetaData:Source", e.Source); err != nil {
+		if err := EncodeKeyValue(w, "MetaData:Source", "source::"+e.Source); err != nil {
 			return err
 		}
 	}
 
 	// write source type if present
 	if e.SourceType != "" {
-		if err := EncodeKeyValue(w, "MetaData:SourceType", e.SourceType); err != nil {
+		if err := EncodeKeyValue(w, "MetaData:Sourcetype", "sourcetype::"+e.SourceType); err != nil {
 			return err
 		}
 	}
@@ -198,11 +199,23 @@ func DecodeEvent(r io.Reader, e *Event) error {
 		case "_MetaData:Index":
 			e.Index = value
 		case "MetaData:Host":
-			e.Host = value
+			if strings.HasPrefix(value, "host::") {
+				e.Host = strings.TrimPrefix(value, "host::")
+			} else {
+				e.Host = value
+			}
 		case "MetaData:Source":
-			e.Source = value
-		case "MetaData:SourceType":
-			e.SourceType = value
+			if strings.HasPrefix(value, "source::") {
+				e.Source = strings.TrimPrefix(value, "source::")
+			} else {
+				e.Source = value
+			}
+		case "MetaData:Sourcetype":
+			if strings.HasPrefix(value, "sourcetype::") {
+				e.SourceType = strings.TrimPrefix(value, "sourcetype::")
+			} else {
+				e.SourceType = value
+			}
 		case "_done":
 			// Skip _done=_done
 		case "_raw":
@@ -245,8 +258,8 @@ func getHeaderValues(e *Event) (uint32, uint32) {
 	const stringOverhead = uint32(5)
 	const kvOverhead = stringOverhead + stringOverhead
 
-	// include header: 4 bytes for message size + 4 bytes for number of maps
-	size := uint32(4 + 4)
+	// include 4 bytes for number of maps
+	size := uint32(4)
 
 	// number of key value pairs
 	maps := uint32(0)
@@ -256,18 +269,18 @@ func getHeaderValues(e *Event) (uint32, uint32) {
 	maps += 1
 
 	if e.Host != "" {
-		// key is "MetaData:Host"
-		size += 13 + uint32(len(e.Host)) + kvOverhead
+		// key is "MetaData:Host", value prefix is "host::"
+		size += 13 + 6 + uint32(len(e.Host)) + kvOverhead
 		maps += 1
 	}
 	if e.Source != "" {
-		// key is "MetaData:Source"
-		size += 15 + uint32(len(e.Source)) + kvOverhead
+		// key is "MetaData:Source", value prefix is "source::"
+		size += 15 + 8 + uint32(len(e.Source)) + kvOverhead
 		maps += 1
 	}
 	if e.SourceType != "" {
-		// key is "MetaData:SourceType"
-		size += 19 + uint32(len(e.SourceType)) + kvOverhead
+		// key is "MetaData:Sourcetype", value prefix is "sourcetype::"
+		size += 19 + 12 + uint32(len(e.SourceType)) + kvOverhead
 		maps += 1
 	}
 
@@ -288,7 +301,7 @@ func getHeaderValues(e *Event) (uint32, uint32) {
 	// extra null padding after _raw
 	size += 4
 
-	// "_raw<null>" trailer (include string size)
+	// "_raw<null>" trailer (includes string size)
 	size += 9
 
 	return size, maps

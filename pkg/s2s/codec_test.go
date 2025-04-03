@@ -33,22 +33,22 @@ func TestEncodeString(t *testing.T) {
 		{
 			name:     "empty string",
 			input:    "",
-			expected: []byte{0, 0, 0, 0, 0},
+			expected: []byte{0, 0, 0, 1, 0},
 		},
 		{
 			name:     "simple string",
 			input:    "hello",
-			expected: []byte{0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o', 0},
+			expected: []byte{0, 0, 0, 6, 'h', 'e', 'l', 'l', 'o', 0},
 		},
 		{
 			name:     "string with spaces",
 			input:    "hello world",
-			expected: []byte{0, 0, 0, 11, 'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', 0},
+			expected: []byte{0, 0, 0, 12, 'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', 0},
 		},
 		{
 			name:     "unicode string",
 			input:    "Hello 世界 🌍",
-			expected: []byte{0, 0, 0, 17, 'H', 'e', 'l', 'l', 'o', ' ', 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, ' ', 0xf0, 0x9f, 0x8c, 0x8d, 0},
+			expected: []byte{0, 0, 0, 18, 'H', 'e', 'l', 'l', 'o', ' ', 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, ' ', 0xf0, 0x9f, 0x8c, 0x8d, 0},
 		},
 	}
 
@@ -81,19 +81,19 @@ func TestDecodeString(t *testing.T) {
 	}{
 		{
 			name:    "empty string",
-			input:   []byte{0, 0, 0, 0, 0},
+			input:   []byte{0, 0, 0, 1, 0},
 			want:    "",
 			wantErr: false,
 		},
 		{
 			name:    "simple string",
-			input:   []byte{0, 0, 0, 5, 'h', 'e', 'l', 'l', 'o', 0},
+			input:   []byte{0, 0, 0, 6, 'h', 'e', 'l', 'l', 'o', 0},
 			want:    "hello",
 			wantErr: false,
 		},
 		{
 			name:    "unicode string",
-			input:   []byte{0, 0, 0, 17, 'H', 'e', 'l', 'l', 'o', ' ', 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, ' ', 0xf0, 0x9f, 0x8c, 0x8d, 0},
+			input:   []byte{0, 0, 0, 18, 'H', 'e', 'l', 'l', 'o', ' ', 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, ' ', 0xf0, 0x9f, 0x8c, 0x8d, 0},
 			want:    "Hello 世界 🌍",
 			wantErr: false,
 		},
@@ -106,21 +106,21 @@ func TestDecodeString(t *testing.T) {
 		},
 		{
 			name:        "missing null terminator",
-			input:       []byte{0, 0, 0, 1, 'a'}, // length=1 but no null terminator
+			input:       []byte{0, 0, 0, 2, 'a'}, // length=2 but no null terminator
 			want:        "",
 			wantErr:     true,
 			errContains: "EOF",
 		},
 		{
 			name:        "length mismatch",
-			input:       []byte{0, 0, 0, 2, 'a', 0}, // length=2 but only 1 byte of data
+			input:       []byte{0, 0, 0, 3, 'a', 0}, // length=3 but only 1 byte of data
 			want:        "",
 			wantErr:     true,
 			errContains: "EOF",
 		},
 		{
 			name:        "invalid null terminator",
-			input:       []byte{0, 0, 0, 1, 'a', 'b'}, // length=1 but wrong null terminator
+			input:       []byte{0, 0, 0, 2, 'a', 'b'}, // length=2 but wrong null terminator
 			want:        "",
 			wantErr:     true,
 			errContains: "invalid data format",
@@ -169,19 +169,19 @@ func TestEncodeKeyValue(t *testing.T) {
 			name:     "empty key and value",
 			key:      "",
 			value:    "",
-			expected: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			expected: []byte{0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
 		},
 		{
 			name:     "simple key-value",
 			key:      "name",
 			value:    "John",
-			expected: []byte{0, 0, 0, 4, 'n', 'a', 'm', 'e', 0, 0, 0, 0, 4, 'J', 'o', 'h', 'n', 0},
+			expected: []byte{0, 0, 0, 5, 'n', 'a', 'm', 'e', 0, 0, 0, 0, 5, 'J', 'o', 'h', 'n', 0},
 		},
 		{
 			name:     "unicode key-value",
 			key:      "名前",
 			value:    "世界",
-			expected: []byte{0, 0, 0, 6, 0xe5, 0x90, 0x8d, 0xe5, 0x89, 0x8d, 0, 0, 0, 0, 6, 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, 0},
+			expected: []byte{0, 0, 0, 7, 0xe5, 0x90, 0x8d, 0xe5, 0x89, 0x8d, 0, 0, 0, 0, 7, 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, 0},
 		},
 	}
 
@@ -215,28 +215,28 @@ func TestDecodeKeyValue(t *testing.T) {
 	}{
 		{
 			name:      "empty key and value",
-			input:     []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			input:     []byte{0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
 			wantKey:   "",
 			wantValue: "",
 			wantErr:   false,
 		},
 		{
 			name:      "simple key-value",
-			input:     []byte{0, 0, 0, 4, 'n', 'a', 'm', 'e', 0, 0, 0, 0, 4, 'J', 'o', 'h', 'n', 0},
+			input:     []byte{0, 0, 0, 5, 'n', 'a', 'm', 'e', 0, 0, 0, 0, 5, 'J', 'o', 'h', 'n', 0},
 			wantKey:   "name",
 			wantValue: "John",
 			wantErr:   false,
 		},
 		{
 			name:      "unicode key-value",
-			input:     []byte{0, 0, 0, 6, 0xe5, 0x90, 0x8d, 0xe5, 0x89, 0x8d, 0, 0, 0, 0, 6, 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, 0},
+			input:     []byte{0, 0, 0, 7, 0xe5, 0x90, 0x8d, 0xe5, 0x89, 0x8d, 0, 0, 0, 0, 7, 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, 0},
 			wantKey:   "名前",
 			wantValue: "世界",
 			wantErr:   false,
 		},
 		{
 			name:        "incomplete key",
-			input:       []byte{0, 0, 0, 1}, // length=1 but no data
+			input:       []byte{0, 0, 0, 2}, // length=2 but no data
 			wantKey:     "",
 			wantValue:   "",
 			wantErr:     true,
@@ -244,7 +244,7 @@ func TestDecodeKeyValue(t *testing.T) {
 		},
 		{
 			name:        "incomplete value",
-			input:       []byte{0, 0, 0, 1, 'a', 0, 0, 0, 1}, // complete key, incomplete value
+			input:       []byte{0, 0, 0, 2, 'a', 0, 0, 0, 1}, // complete key, incomplete value
 			wantKey:     "",
 			wantValue:   "",
 			wantErr:     true,
@@ -252,7 +252,7 @@ func TestDecodeKeyValue(t *testing.T) {
 		},
 		{
 			name:        "invalid null terminator in key",
-			input:       []byte{0, 0, 0, 1, 'a', 'b', 0, 0, 0, 1, 'c', 0}, // wrong null terminator in key
+			input:       []byte{0, 0, 0, 2, 'a', 'b', 0, 0, 0, 2, 'c', 0}, // wrong null terminator in key
 			wantKey:     "",
 			wantValue:   "",
 			wantErr:     true,
@@ -340,8 +340,8 @@ func TestEncodeEvent(t *testing.T) {
 				if !bytes.Contains(data, []byte("MetaData:Source")) {
 					return errors.New("missing MetaData:Source")
 				}
-				if !bytes.Contains(data, []byte("MetaData:SourceType")) {
-					return errors.New("missing MetaData:SourceType")
+				if !bytes.Contains(data, []byte("MetaData:Sourcetype")) {
+					return errors.New("missing MetaData:Sourcetype")
 				}
 				if !bytes.Contains(data, []byte("custom_field")) {
 					return errors.New("missing custom field")
@@ -413,7 +413,7 @@ func TestEncodeEvent(t *testing.T) {
 
 			// Verify message size
 			size, _ := getHeaderValues(tt.event)
-			if size != uint32(len(data)) {
+			if size+4 != uint32(len(data)) {
 				t.Errorf("EncodeEvent() header message size = %v, want %v", size, len(data))
 			}
 
