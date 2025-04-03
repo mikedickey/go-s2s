@@ -1,6 +1,9 @@
 # Splunk-to-Splunk Protocol Library
 
-This project is pubilshed under the [Apache License](LICENSE). It is based on Splunk's [eventgen s2s plugin](https://github.com/splunk/eventgen/blob/develop/splunk_eventgen/lib/plugins/output/s2s.py) which only supports the "older" (version 2) protocol.
+This project is pubilshed under the [Apache License](LICENSE). It was originally based on Splunk's
+[eventgen s2s plugin](https://github.com/splunk/eventgen/blob/develop/splunk_eventgen/lib/plugins/output/s2s.py)
+which only supports the "older" (version 2) protocol. Packet captures were then used to add support for version 3.
+New protocol versions are not currently supported.
 
 
 ## Configuring Universal Forwarders

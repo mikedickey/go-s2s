@@ -18,8 +18,10 @@
 package s2s
 
 import (
+	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 // Event represents an event in the Splunk-to-Splunk protocol.
@@ -29,6 +31,7 @@ type Event struct {
 	Source     string
 	SourceType string
 	Raw        string
+	Time       time.Time
 	Fields     map[string]string
 }
 
@@ -39,6 +42,7 @@ func (e *Event) Clear() {
 	e.Source = ""
 	e.SourceType = ""
 	e.Raw = ""
+	e.Time = time.Time{}
 	e.Fields = make(map[string]string)
 }
 
@@ -90,8 +94,15 @@ func (e *Event) String() string {
 			sb.WriteString(" ")
 		}
 	}
-	sb.WriteString("_raw=")
-	sb.WriteString(e.Raw)
-	sb.WriteString(" ")
+	if !e.Time.IsZero() {
+		sb.WriteString("_time=")
+		sb.WriteString(fmt.Sprintf("%d", e.Time.Unix()))
+		sb.WriteString(" ")
+	}
+	if e.Raw != "" {
+		sb.WriteString("_raw=")
+		sb.WriteString(e.Raw)
+		sb.WriteString(" ")
+	}
 	return strings.TrimSpace(sb.String())
 }

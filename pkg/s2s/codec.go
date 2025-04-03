@@ -20,8 +20,11 @@ package s2s
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var ErrInvalidData = errors.New("invalid data format")
@@ -113,8 +116,10 @@ func EncodeEvent(w io.Writer, e *Event) error {
 	}
 
 	// always write index (even if empty)
-	if err := EncodeKeyValue(w, "_MetaData:Index", e.Index); err != nil {
-		return err
+	if e.Index != "" {
+		if err := EncodeKeyValue(w, "_MetaData:Index", e.Index); err != nil {
+			return err
+		}
 	}
 
 	// write host if present
@@ -141,6 +146,13 @@ func EncodeEvent(w io.Writer, e *Event) error {
 	// write other fields
 	for k, v := range e.Fields {
 		if err := EncodeKeyValue(w, k, v); err != nil {
+			return err
+		}
+	}
+
+	// write _time if present
+	if !e.Time.IsZero() {
+		if err := EncodeKeyValue(w, "_time", fmt.Sprintf("%d", e.Time.Unix())); err != nil {
 			return err
 		}
 	}
@@ -216,6 +228,12 @@ func DecodeEvent(r io.Reader, e *Event) error {
 			} else {
 				e.SourceType = value
 			}
+		case "_time":
+			t, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return ErrInvalidData
+			}
+			e.Time = time.Unix(t, 0)
 		case "_done":
 			// Skip _done=_done
 		case "_raw":
@@ -264,9 +282,11 @@ func getHeaderValues(e *Event) (uint32, uint32) {
 	// number of key value pairs
 	maps := uint32(0)
 
-	// key is "_MetaData:Index"
-	size += 15 + uint32(len(e.Index)) + kvOverhead
-	maps += 1
+	if e.Index != "" {
+		// key is "_MetaData:Index"
+		size += 15 + uint32(len(e.Index)) + kvOverhead
+		maps += 1
+	}
 
 	if e.Host != "" {
 		// key is "MetaData:Host", value prefix is "host::"

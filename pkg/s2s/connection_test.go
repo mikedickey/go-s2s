@@ -33,12 +33,14 @@ func TestWriteSignature(t *testing.T) {
 	tests := []struct {
 		name          string
 		endpoint      string
+		version       int
 		wantErr       bool
 		wantSignature []byte
 	}{
 		{
 			name:     "basic signature",
 			endpoint: "test-server:8089",
+			version:  2,
 			wantErr:  false,
 			wantSignature: bytes.Join([][]byte{
 				createFixedSizeBytes("--splunk-cooked-mode-v2--", 128),
@@ -49,14 +51,16 @@ func TestWriteSignature(t *testing.T) {
 		{
 			name:     "empty server name",
 			endpoint: "",
+			version:  2,
 			wantErr:  true,
 		},
 		{
 			name:     "zero port",
 			endpoint: "test-server:0",
+			version:  3,
 			wantErr:  false,
 			wantSignature: bytes.Join([][]byte{
-				createFixedSizeBytes("--splunk-cooked-mode-v2--", 128),
+				createFixedSizeBytes("--splunk-cooked-mode-v3--", 128),
 				createFixedSizeBytes("test-server", 256),
 				createFixedSizeBytes("0", 16),
 			}, nil),
@@ -66,7 +70,7 @@ func TestWriteSignature(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			err := writeSignature(&buf, tt.endpoint)
+			err := writeSignature(&buf, tt.endpoint, tt.version)
 
 			if tt.wantErr {
 				if err == nil {

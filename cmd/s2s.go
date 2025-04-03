@@ -110,10 +110,10 @@ func main() {
 		}
 
 		if err := server.Start(); err != nil {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatalf("Failed to start S2S server: %v", err)
 		}
 
-		fmt.Printf("Server listening on %s\n", flagEndpoint)
+		fmt.Printf("S2S server listening on %s\n", flagEndpoint)
 		if flagTLS {
 			fmt.Println("TLS enabled")
 		}
@@ -124,7 +124,7 @@ func main() {
 		<-sigChan
 
 		if err := server.Stop(); err != nil {
-			log.Printf("Error stopping server: %v", err)
+			log.Printf("Error stopping S2S server: %v", err)
 		}
 		return
 	}

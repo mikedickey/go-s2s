@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -38,10 +39,11 @@ var (
 
 // Conn is a splunk-to-splunk connection
 type Conn struct {
-	Endpoint       string
-	Encrypted      bool
-	conn           net.Conn
-	wroteSignature bool
+	Endpoint     string
+	Encrypted    bool
+	Version      int
+	conn         net.Conn
+	didHandshake bool
 }
 
 // Connect establishes a new splunk-to-splunk connection
@@ -51,9 +53,10 @@ func Connect(endpoint string) (*Conn, error) {
 	}
 
 	c := &Conn{
-		Endpoint:       endpoint,
-		Encrypted:      false,
-		wroteSignature: false,
+		Endpoint:     endpoint,
+		Encrypted:    false,
+		Version:      3,
+		didHandshake: false,
 	}
 	var err error
 	c.conn, err = net.DialTimeout("tcp", endpoint, ConnectionTimeout)
@@ -88,9 +91,10 @@ func ConnectTLS(endpoint, cert, serverName string, insecureSkipVerify bool) (*Co
 	}
 
 	c := &Conn{
-		Endpoint:       endpoint,
-		Encrypted:      true,
-		wroteSignature: false,
+		Endpoint:     endpoint,
+		Encrypted:    true,
+		Version:      3,
+		didHandshake: false,
 	}
 	var err error
 	c.conn, err = tls.Dial("tcp", endpoint, tlsConfig)
@@ -108,11 +112,11 @@ func (c *Conn) Close() error {
 
 // SendEvent sends an event to the splunk-to-splunk connection
 func (c *Conn) SendEvent(event *Event) error {
-	if !c.wroteSignature {
-		if err := writeSignature(c.conn, c.Endpoint); err != nil {
+	if !c.didHandshake {
+		if err := c.doHandshake(); err != nil {
 			return err
 		}
-		c.wroteSignature = true
+		c.didHandshake = true
 	}
 
 	if err := event.Write(c.conn); err != nil {
@@ -122,8 +126,37 @@ func (c *Conn) SendEvent(event *Event) error {
 	return nil
 }
 
+// doHandshake performs a splunk-to-splunk protocol handshake
+func (c *Conn) doHandshake() error {
+	// send the signature header
+	if err := writeSignature(c.conn, c.Endpoint, c.Version); err != nil {
+		return err
+	}
+	if c.Version < 3 {
+		return nil
+	}
+
+	// send s2s capabilities to the server
+	clientMsg := &Event{
+		Fields: map[string]string{
+			"__s2s_capabilities": "ack=0;compression=0",
+		},
+	}
+	if err := clientMsg.Write(c.conn); err != nil {
+		return fmt.Errorf("s2s v3 handshake failure: %v", err)
+	}
+
+	// read the s2s capabilities from the server
+	serverMsg := &Event{}
+	if err := serverMsg.Read(c.conn); err != nil {
+		return fmt.Errorf("s2s v3 handshake failure: %v", err)
+	}
+
+	return nil
+}
+
 // writeSignature writes a splunk-to-splunk signature to the writer
-func writeSignature(w io.Writer, endpoint string) error {
+func writeSignature(w io.Writer, endpoint string, version int) error {
 	var signature [128]byte
 	var serverName [256]byte
 	var mgmtPort [16]byte
@@ -132,7 +165,7 @@ func writeSignature(w io.Writer, endpoint string) error {
 	if len(endpointParts) != 2 {
 		return ErrInvalidEndpoint
 	}
-	copy(signature[:], "--splunk-cooked-mode-v2--")
+	copy(signature[:], fmt.Sprintf("--splunk-cooked-mode-v%d--", version))
 	copy(serverName[:], endpointParts[0])
 	copy(mgmtPort[:], endpointParts[1])
 
