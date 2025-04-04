@@ -24,8 +24,8 @@ import (
 	"time"
 )
 
-// Event represents an event in the Splunk-to-Splunk protocol.
-type Event struct {
+// Message may used for control or data, with Raw containing one or more events.
+type Message struct {
 	Index      string
 	Host       string
 	Source     string
@@ -35,58 +35,58 @@ type Event struct {
 	Fields     map[string]string
 }
 
-// Clear clears the event.
-func (e *Event) Clear() {
-	e.Index = ""
-	e.Host = ""
-	e.Source = ""
-	e.SourceType = ""
-	e.Raw = ""
-	e.Time = time.Time{}
-	e.Fields = make(map[string]string)
+// Clear clears the message.
+func (m *Message) Clear() {
+	m.Index = ""
+	m.Host = ""
+	m.Source = ""
+	m.SourceType = ""
+	m.Raw = ""
+	m.Time = time.Time{}
+	m.Fields = make(map[string]string)
 }
 
-// Read reads the event from a reader.
-func (e *Event) Read(r io.Reader) error {
-	if e == nil {
-		return ErrNilEvent
+// Read reads the message from a reader.
+func (m *Message) Read(r io.Reader) error {
+	if m == nil {
+		return ErrNilMessage
 	}
-	e.Clear()
-	return DecodeEvent(r, e)
+	m.Clear()
+	return DecodeMessage(r, m)
 }
 
-// Write writes the event to a writer.
-func (e *Event) Write(w io.Writer) error {
-	if e == nil {
-		return ErrNilEvent
+// Write writes the message to a writer.
+func (m *Message) Write(w io.Writer) error {
+	if m == nil {
+		return ErrNilMessage
 	}
-	return EncodeEvent(w, e)
+	return EncodeMessage(w, m)
 }
 
-// String returns a string representation of the event.
-func (e *Event) String() string {
+// String returns a string representation of the message.
+func (m *Message) String() string {
 	var sb strings.Builder
-	if e.Index != "" {
+	if m.Index != "" {
 		sb.WriteString("index=")
-		sb.WriteString(e.Index)
+		sb.WriteString(m.Index)
 		sb.WriteString(" ")
 	}
-	if e.Host != "" {
+	if m.Host != "" {
 		sb.WriteString("host=")
-		sb.WriteString(e.Host)
+		sb.WriteString(m.Host)
 		sb.WriteString(" ")
 	}
-	if e.Source != "" {
+	if m.Source != "" {
 		sb.WriteString("source=")
-		sb.WriteString(e.Source)
+		sb.WriteString(m.Source)
 		sb.WriteString(" ")
 	}
-	if e.SourceType != "" {
+	if m.SourceType != "" {
 		sb.WriteString("sourcetype=")
-		sb.WriteString(e.SourceType)
+		sb.WriteString(m.SourceType)
 		sb.WriteString(" ")
 	}
-	for k, v := range e.Fields {
+	for k, v := range m.Fields {
 		if k != "" {
 			sb.WriteString(k)
 			sb.WriteString("=")
@@ -94,14 +94,14 @@ func (e *Event) String() string {
 			sb.WriteString(" ")
 		}
 	}
-	if !e.Time.IsZero() {
+	if !m.Time.IsZero() {
 		sb.WriteString("_time=")
-		sb.WriteString(fmt.Sprintf("%d", e.Time.Unix()))
+		sb.WriteString(fmt.Sprintf("%d", m.Time.Unix()))
 		sb.WriteString(" ")
 	}
-	if e.Raw != "" {
+	if m.Raw != "" {
 		sb.WriteString("_raw=")
-		sb.WriteString(e.Raw)
+		sb.WriteString(m.Raw)
 		sb.WriteString(" ")
 	}
 	return strings.TrimSpace(sb.String())

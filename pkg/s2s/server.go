@@ -157,22 +157,22 @@ func (s *Server) handleConnection(conn net.Conn) {
 		return
 	}
 
-	// Read events until connection is closed
+	// Read messages until connection is closed
 	for {
-		event := &Event{}
-		if err := event.Read(conn); err != nil {
+		m := &Message{}
+		if err := m.Read(conn); err != nil {
 			if err != io.EOF {
-				log.Printf("Error reading event: %v", err)
+				log.Printf("Error reading message: %v", err)
 			}
 			log.Printf("Connection closed from %s", conn.RemoteAddr())
 			return
 		}
-		if len(event.Raw) == 0 {
+		if len(m.Raw) == 0 {
 			// look for v3 control messages
-			capabilities, ok := event.Fields["__s2s_capabilities"]
+			capabilities, ok := m.Fields["__s2s_capabilities"]
 			if ok {
 				log.Printf("Received s2s capabilities: %s", capabilities)
-				v3Response := &Event{
+				v3Response := &Message{
 					Fields: map[string]string{
 						// from pcap: "cap_response=success;cap_flush_key=true;idx_can_send_hb=true;idx_can_recv_token=true;request_certificate=true;v4=true;channel_limit=300;pl=7"
 						"__s2s_control_msg": "cap_response=success;cap_flush_key=false;idx_can_send_hb=false;idx_can_recv_token=false;request_certificate=false;v4=false;channel_limit=300;pl=7",
@@ -185,6 +185,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 				continue
 			}
 		}
-		fmt.Printf("Received event: %s\n", event.String())
+		fmt.Printf("Received message: %s\n", m.String())
 	}
 }

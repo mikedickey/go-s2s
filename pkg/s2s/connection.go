@@ -110,8 +110,8 @@ func (c *Conn) Close() error {
 	return c.conn.Close()
 }
 
-// SendEvent sends an event to the splunk-to-splunk connection
-func (c *Conn) SendEvent(event *Event) error {
+// SendMessage sends a message over the splunk-to-splunk connection
+func (c *Conn) SendMessage(m *Message) error {
 	if !c.didHandshake {
 		if err := c.doHandshake(); err != nil {
 			return err
@@ -119,7 +119,7 @@ func (c *Conn) SendEvent(event *Event) error {
 		c.didHandshake = true
 	}
 
-	if err := event.Write(c.conn); err != nil {
+	if err := m.Write(c.conn); err != nil {
 		return err
 	}
 
@@ -137,7 +137,7 @@ func (c *Conn) doHandshake() error {
 	}
 
 	// send s2s capabilities to the server
-	clientMsg := &Event{
+	clientMsg := &Message{
 		Fields: map[string]string{
 			"__s2s_capabilities": "ack=0;compression=0",
 		},
@@ -147,7 +147,7 @@ func (c *Conn) doHandshake() error {
 	}
 
 	// read the s2s capabilities from the server
-	serverMsg := &Event{}
+	serverMsg := &Message{}
 	if err := serverMsg.Read(c.conn); err != nil {
 		return fmt.Errorf("s2s v3 handshake failure: %v", err)
 	}

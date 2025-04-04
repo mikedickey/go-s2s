@@ -28,7 +28,7 @@ import (
 )
 
 var ErrInvalidData = errors.New("invalid data format")
-var ErrNilEvent = errors.New("event is nil")
+var ErrNilMessage = errors.New("message is nil")
 
 // EncodeString writes a string to the given writer in the wire protocol format.
 // The format is: 4-byte length (big-endian uint32) + string contents + null terminator
@@ -100,14 +100,14 @@ func DecodeKeyValue(r io.Reader, key *string, value *string) error {
 	return nil
 }
 
-// EncodeEvent writes an event to the given writer in the wire protocol format.
-func EncodeEvent(w io.Writer, e *Event) error {
-	if e == nil {
-		return ErrNilEvent
+// EncodeMessage writes an message to the given writer in the wire protocol format.
+func EncodeMessage(w io.Writer, m *Message) error {
+	if m == nil {
+		return ErrNilMessage
 	}
 
 	// write size and maps header fields
-	size, maps := getHeaderValues(e)
+	size, maps := getHeaderValues(m)
 	if err := binary.Write(w, binary.BigEndian, size); err != nil {
 		return err
 	}
@@ -116,43 +116,43 @@ func EncodeEvent(w io.Writer, e *Event) error {
 	}
 
 	// always write index (even if empty)
-	if e.Index != "" {
-		if err := EncodeKeyValue(w, "_MetaData:Index", e.Index); err != nil {
+	if m.Index != "" {
+		if err := EncodeKeyValue(w, "_MetaData:Index", m.Index); err != nil {
 			return err
 		}
 	}
 
 	// write host if present
-	if e.Host != "" {
-		if err := EncodeKeyValue(w, "MetaData:Host", "host::"+e.Host); err != nil {
+	if m.Host != "" {
+		if err := EncodeKeyValue(w, "MetaData:Host", "host::"+m.Host); err != nil {
 			return err
 		}
 	}
 
 	// write source if present
-	if e.Source != "" {
-		if err := EncodeKeyValue(w, "MetaData:Source", "source::"+e.Source); err != nil {
+	if m.Source != "" {
+		if err := EncodeKeyValue(w, "MetaData:Source", "source::"+m.Source); err != nil {
 			return err
 		}
 	}
 
 	// write source type if present
-	if e.SourceType != "" {
-		if err := EncodeKeyValue(w, "MetaData:Sourcetype", "sourcetype::"+e.SourceType); err != nil {
+	if m.SourceType != "" {
+		if err := EncodeKeyValue(w, "MetaData:Sourcetype", "sourcetype::"+m.SourceType); err != nil {
 			return err
 		}
 	}
 
 	// write other fields
-	for k, v := range e.Fields {
+	for k, v := range m.Fields {
 		if err := EncodeKeyValue(w, k, v); err != nil {
 			return err
 		}
 	}
 
 	// write _time if present
-	if !e.Time.IsZero() {
-		if err := EncodeKeyValue(w, "_time", fmt.Sprintf("%d", e.Time.Unix())); err != nil {
+	if !m.Time.IsZero() {
+		if err := EncodeKeyValue(w, "_time", fmt.Sprintf("%d", m.Time.Unix())); err != nil {
 			return err
 		}
 	}
@@ -161,7 +161,7 @@ func EncodeEvent(w io.Writer, e *Event) error {
 	if err := EncodeKeyValue(w, "_done", "_done"); err != nil {
 		return err
 	}
-	if err := EncodeKeyValue(w, "_raw", e.Raw); err != nil {
+	if err := EncodeKeyValue(w, "_raw", m.Raw); err != nil {
 		return err
 	}
 
@@ -178,10 +178,10 @@ func EncodeEvent(w io.Writer, e *Event) error {
 	return nil
 }
 
-// DecodeEvent reads an event from the given reader in the wire protocol format.
-func DecodeEvent(r io.Reader, e *Event) error {
-	if e == nil {
-		return ErrNilEvent
+// DecodeMessage reads a message from the given reader in the wire protocol format.
+func DecodeMessage(r io.Reader, m *Message) error {
+	if m == nil {
+		return ErrNilMessage
 	}
 
 	// Read size and maps count
@@ -194,8 +194,8 @@ func DecodeEvent(r io.Reader, e *Event) error {
 	}
 
 	// sanity check that Fields are initialized
-	if e.Fields == nil {
-		e.Fields = make(map[string]string)
+	if m.Fields == nil {
+		m.Fields = make(map[string]string)
 	}
 
 	// Read all key-value pairs
@@ -209,37 +209,37 @@ func DecodeEvent(r io.Reader, e *Event) error {
 		// Handle special metadata fields
 		switch key {
 		case "_MetaData:Index":
-			e.Index = value
+			m.Index = value
 		case "MetaData:Host":
 			if strings.HasPrefix(value, "host::") {
-				e.Host = strings.TrimPrefix(value, "host::")
+				m.Host = strings.TrimPrefix(value, "host::")
 			} else {
-				e.Host = value
+				m.Host = value
 			}
 		case "MetaData:Source":
 			if strings.HasPrefix(value, "source::") {
-				e.Source = strings.TrimPrefix(value, "source::")
+				m.Source = strings.TrimPrefix(value, "source::")
 			} else {
-				e.Source = value
+				m.Source = value
 			}
 		case "MetaData:Sourcetype":
 			if strings.HasPrefix(value, "sourcetype::") {
-				e.SourceType = strings.TrimPrefix(value, "sourcetype::")
+				m.SourceType = strings.TrimPrefix(value, "sourcetype::")
 			} else {
-				e.SourceType = value
+				m.SourceType = value
 			}
 		case "_time":
 			t, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				return ErrInvalidData
 			}
-			e.Time = time.Unix(t, 0)
+			m.Time = time.Unix(t, 0)
 		case "_done":
 			// Skip _done=_done
 		case "_raw":
-			e.Raw = value
+			m.Raw = value
 		default:
-			e.Fields[key] = value
+			m.Fields[key] = value
 		}
 
 		mapsRead++
@@ -267,8 +267,8 @@ func DecodeEvent(r io.Reader, e *Event) error {
 }
 
 // getHeader returns message size and number of maps
-func getHeaderValues(e *Event) (uint32, uint32) {
-	if e == nil {
+func getHeaderValues(m *Message) (uint32, uint32) {
+	if m == nil {
 		return 0, 0
 	}
 
@@ -282,30 +282,30 @@ func getHeaderValues(e *Event) (uint32, uint32) {
 	// number of key value pairs
 	maps := uint32(0)
 
-	if e.Index != "" {
+	if m.Index != "" {
 		// key is "_MetaData:Index"
-		size += 15 + uint32(len(e.Index)) + kvOverhead
+		size += 15 + uint32(len(m.Index)) + kvOverhead
 		maps += 1
 	}
 
-	if e.Host != "" {
+	if m.Host != "" {
 		// key is "MetaData:Host", value prefix is "host::"
-		size += 13 + 6 + uint32(len(e.Host)) + kvOverhead
+		size += 13 + 6 + uint32(len(m.Host)) + kvOverhead
 		maps += 1
 	}
-	if e.Source != "" {
+	if m.Source != "" {
 		// key is "MetaData:Source", value prefix is "source::"
-		size += 15 + 8 + uint32(len(e.Source)) + kvOverhead
+		size += 15 + 8 + uint32(len(m.Source)) + kvOverhead
 		maps += 1
 	}
-	if e.SourceType != "" {
+	if m.SourceType != "" {
 		// key is "MetaData:Sourcetype", value prefix is "sourcetype::"
-		size += 19 + 12 + uint32(len(e.SourceType)) + kvOverhead
+		size += 19 + 12 + uint32(len(m.SourceType)) + kvOverhead
 		maps += 1
 	}
 
 	// include other fields
-	for k, v := range e.Fields {
+	for k, v := range m.Fields {
 		size += uint32(len(k)) + uint32(len(v)) + kvOverhead
 		maps += 1
 	}
@@ -315,7 +315,7 @@ func getHeaderValues(e *Event) (uint32, uint32) {
 	maps += 1
 
 	// _raw=<raw>
-	size += 4 + uint32(len(e.Raw)) + kvOverhead
+	size += 4 + uint32(len(m.Raw)) + kvOverhead
 	maps += 1
 
 	// extra null padding after _raw

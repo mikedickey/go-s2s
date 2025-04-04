@@ -8,7 +8,7 @@ New protocol versions are not currently supported.
 
 ## Configuring Universal Forwarders
 
-You can use this to receive events from Splunk's Universal Forwarders. Simply update your `outputs.conf` file:
+You can use this to receive messages from Splunk's Universal Forwarders. Simply update your `outputs.conf` file:
 
 * Add an additional `tcpout` destination:
 
@@ -38,15 +38,15 @@ See also [this article about best practices](https://cribl.io/blog/better-practi
 
 ## Command Line Tool
 
-The library includes a command-line tool `s2s` that can be used to send log file contents to a Splunk-to-Splunk (S2S) endpoint or run as a server to receive S2S events.
+The library includes a command-line tool `s2s` that can be used to send log file contents to a Splunk-to-Splunk (S2S) endpoint or run as a server to receive S2S messages.
 
 ### Usage
 
 ```bash
-# Client mode (send events)
+# Client mode (send messages)
 s2s [options] -file <logfile>
 
-# Server mode (receive events)
+# Server mode (receive messages)
 s2s -server [options]
 ```
 
@@ -62,10 +62,10 @@ s2s -server [options]
 - `-cert <path>`: Path to client certificate for TLS (optional)
 - `-server-name <name>`: Server name for TLS verification
 - `-insecure`: Skip TLS certificate verification (not recommended for production)
-- `-index <name>`: Index to send events to
-- `-host <name>`: Host value for events
-- `-source <path>`: Source value for events
-- `-sourcetype <type>`: Sourcetype value for events
+- `-index <name>`: Index to send messages to
+- `-host <name>`: Host value for messages
+- `-source <path>`: Source value for messages
+- `-sourcetype <type>`: Sourcetype value for messages
 
 #### Server Mode Options
 - `-server`: Run in server mode (listen for incoming connections)
@@ -98,7 +98,7 @@ s2s -server [options]
    s2s -file /var/log/application.log -endpoint splunk.example.com:9997 -tls -insecure
    ```
 
-5. Send log file with event metadata:
+5. Send log file with metadata:
    ```bash
    s2s -file /var/log/application.log -endpoint splunk.example.com:9997 \
      -index main \
@@ -127,19 +127,19 @@ s2s -server [options]
 ### Notes
 
 #### Client Mode Notes
-- The command reads the log file line by line and sends each line as a separate event
-- If an error occurs while sending an event, it will be logged but the command will continue processing the remaining events
-- The connection is automatically closed when all events have been sent or if an error occurs
+- The command reads the log file line by line and sends each line as a separate message
+- If an error occurs while sending a message, it will be logged but the command will continue processing the remaining lines
+- The connection is automatically closed when all messages have been sent or if an error occurs
 - When using TLS, the server name should match the certificate's Common Name (CN) or Subject Alternative Name (SAN)
-- Event metadata (index, host, source, sourcetype) is applied to all events sent from the log file
-- If metadata fields are not specified, they will be empty in the sent events
+- Metadata (index, host, source, sourcetype) is applied to all messages sent from the log file
+- If metadata fields are not specified, they will be empty in the sent messages
 
 #### Server Mode Notes
-- In server mode, the command will listen for incoming connections and print each received event to stdout
+- In server mode, the command will listen for incoming connections and print each received message to stdout
 - Server mode can be stopped by pressing Ctrl+C
 - When using TLS in server mode, both certificate (-cert) and private key (-key) files must be specified
 - The server validates the S2S protocol signature from incoming connections
 - Each client connection is handled in a separate goroutine
 - The server will continue accepting new connections until stopped
-- Events are printed to stdout in the format: "Received event: <event content>"
+- Messages are printed to stdout in the format: "Received message: <message content>"
 

@@ -287,18 +287,18 @@ func TestDecodeKeyValue(t *testing.T) {
 	}
 }
 
-func TestEncodeEvent(t *testing.T) {
+func TestEncodeMessage(t *testing.T) {
 	tests := []struct {
 		name     string
-		event    *Event
+		message  *Message
 		wantErr  bool
 		validate func([]byte) error
 	}{
 		{
-			name: "minimal event",
-			event: &Event{
+			name: "minimal message",
+			message: &Message{
 				Index:  "main",
-				Raw:    "test event",
+				Raw:    "test message",
 				Fields: make(map[string]string),
 			},
 			wantErr: false,
@@ -321,13 +321,13 @@ func TestEncodeEvent(t *testing.T) {
 			},
 		},
 		{
-			name: "full event",
-			event: &Event{
+			name: "full message",
+			message: &Message{
 				Index:      "main",
 				Host:       "testhost",
 				Source:     "testsource",
 				SourceType: "test:sourcetype",
-				Raw:        "full test event",
+				Raw:        "full test message",
 				Fields: map[string]string{
 					"custom_field": "custom_value",
 				},
@@ -350,11 +350,11 @@ func TestEncodeEvent(t *testing.T) {
 			},
 		},
 		{
-			name: "event with unicode",
-			event: &Event{
+			name: "message with unicode",
+			message: &Message{
 				Index: "main",
 				Host:  "世界",
-				Raw:   "🌍 test event",
+				Raw:   "🌍 test message",
 				Fields: map[string]string{
 					"unicode_field": "测试",
 				},
@@ -371,14 +371,14 @@ func TestEncodeEvent(t *testing.T) {
 			},
 		},
 		{
-			name:    "nil event",
-			event:   nil,
+			name:    "nil message",
+			message: nil,
 			wantErr: true,
 		},
 		{
 			name: "empty index",
-			event: &Event{
-				Raw:    "test event",
+			message: &Message{
+				Raw:    "test message",
 				Fields: make(map[string]string),
 			},
 			wantErr: false,
@@ -388,17 +388,17 @@ func TestEncodeEvent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			err := EncodeEvent(&buf, tt.event)
+			err := EncodeMessage(&buf, tt.message)
 
 			if tt.wantErr {
 				if err == nil {
-					t.Error("EncodeEvent() error = nil, wantErr true")
+					t.Error("EncodeMessage() error = nil, wantErr true")
 				}
 				return
 			}
 
 			if err != nil {
-				t.Errorf("EncodeEvent() error = %v, wantErr false", err)
+				t.Errorf("EncodeMessage() error = %v, wantErr false", err)
 				return
 			}
 
@@ -407,14 +407,14 @@ func TestEncodeEvent(t *testing.T) {
 
 			// Verify the data is not empty
 			if len(data) == 0 {
-				t.Error("EncodeEvent() produced empty output")
+				t.Error("EncodeMessage() produced empty output")
 				return
 			}
 
 			// Verify message size
-			size, _ := getHeaderValues(tt.event)
+			size, _ := getHeaderValues(tt.message)
 			if size+4 != uint32(len(data)) {
-				t.Errorf("EncodeEvent() header message size = %v, want %v", size, len(data))
+				t.Errorf("EncodeMessage() header message size = %v, want %v", size, len(data))
 			}
 
 			// Run custom validation if provided
@@ -427,34 +427,34 @@ func TestEncodeEvent(t *testing.T) {
 	}
 }
 
-// TestEncodeEventRoundTrip tests that an event can be encoded and then decoded correctly
-func TestEncodeEventRoundTrip(t *testing.T) {
-	original := &Event{
+// TestEncodeMessageRoundTrip tests that a message can be encoded and then decoded correctly
+func TestEncodeMessageRoundTrip(t *testing.T) {
+	original := &Message{
 		Index:      "main",
 		Host:       "testhost",
 		Source:     "testsource",
 		SourceType: "test:sourcetype",
-		Raw:        "test event data",
+		Raw:        "test message data",
 		Fields: map[string]string{
 			"field1": "value1",
 			"field2": "value2",
 		},
 	}
 
-	// Encode the event
+	// Encode the message
 	var buf bytes.Buffer
-	if err := EncodeEvent(&buf, original); err != nil {
-		t.Fatalf("EncodeEvent() error = %v", err)
+	if err := EncodeMessage(&buf, original); err != nil {
+		t.Fatalf("EncodeMessage() error = %v", err)
 	}
 
-	// Decode the event
-	decoded := &Event{}
-	err := DecodeEvent(bytes.NewReader(buf.Bytes()), decoded)
+	// Decode the message
+	decoded := &Message{}
+	err := DecodeMessage(bytes.NewReader(buf.Bytes()), decoded)
 	if err != nil {
-		t.Fatalf("DecodeEvent() error = %v", err)
+		t.Fatalf("DecodeMessage() error = %v", err)
 	}
 
-	// Compare the events
+	// Compare the messages
 	if decoded.Index != original.Index {
 		t.Errorf("Index = %v, want %v", decoded.Index, original.Index)
 	}

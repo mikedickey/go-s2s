@@ -81,10 +81,10 @@ func main() {
 	flag.BoolVar(&flagInsecureTLS, "insecure", false, "skip TLS certificate verification")
 	flag.BoolVar(&flagServerMode, "server", false, "run in server mode (listen for incoming connections)")
 	flag.StringVar(&flagKeyFile, "key", "", "path to private key file for TLS server mode")
-	flag.StringVar(&flagIndex, "index", "", "index to send events to")
-	flag.StringVar(&flagHost, "host", "", "host value for events")
-	flag.StringVar(&flagSource, "source", "", "source value for events")
-	flag.StringVar(&flagSourceType, "sourcetype", "", "sourcetype value for events")
+	flag.StringVar(&flagIndex, "index", "", "index to send messages to")
+	flag.StringVar(&flagHost, "host", "", "host value for messages")
+	flag.StringVar(&flagSource, "source", "", "source value for messages")
+	flag.StringVar(&flagSourceType, "sourcetype", "", "sourcetype value for messages")
 	flag.Parse()
 
 	if flagVersion {
@@ -157,22 +157,22 @@ func main() {
 	}
 	defer conn.Close()
 
-	// Read and send events
+	// Read and send messages
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		event := &s2s.Event{
+		m := &s2s.Message{
 			Raw:        scanner.Text(),
 			Index:      flagIndex,
 			Host:       flagHost,
 			Source:     flagSource,
 			SourceType: flagSourceType,
 		}
-		if err := conn.SendEvent(event); err != nil {
+		if err := conn.SendMessage(m); err != nil {
 			if isConnectionError(err) {
 				log.Printf("Connection lost: %v", err)
 				return
 			}
-			log.Printf("Failed to send event: %v", err)
+			log.Printf("Failed to send message: %v", err)
 		}
 	}
 
